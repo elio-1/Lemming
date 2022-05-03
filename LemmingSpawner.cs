@@ -7,6 +7,7 @@ public class LemmingSpawner : MonoBehaviour
     [SerializeField] GameObject lemming;
     [SerializeField] float spawnRate = 1f;
     [SerializeField] int lemmingsToSpawn = 10;
+    [SerializeField] IntData totalLemmings;
 
     private int counter = 0;
     private float timer= 0;
@@ -14,6 +15,7 @@ public class LemmingSpawner : MonoBehaviour
     private void Awake()
     {
         counter = 0;
+        totalLemmings.variable = lemmingsToSpawn;
     }
     private void Update()
     {

@@ -7,7 +7,8 @@ using UnityEngine;
         STOP,
         FALLING,
         WALK_LEFT,
-        WALK_RIGHT
+        WALK_RIGHT,
+        CLIMBING
     }
 
 public class LemmingStateMachine : MonoBehaviour
@@ -18,7 +19,7 @@ public class LemmingStateMachine : MonoBehaviour
     [SerializeField] LayerMask _groundSensorLayer;
     private bool _isFalling = true;
 
-   
+
 
 
     [Header("Movement")]
@@ -27,10 +28,11 @@ public class LemmingStateMachine : MonoBehaviour
     private Rigidbody2D rb;
     private LemmingState _currentState;
     private bool _walkingRight = false;
+    private bool _isStopped = false;
     private SpriteRenderer sprite;
     private void Awake()
     {
-        rb = GetComponent<Rigidbody2D>(); 
+        rb = GetComponent<Rigidbody2D>();
         sprite = GetComponent<SpriteRenderer>();
         TransitionToState(LemmingState.IDLE);
     }
@@ -50,25 +52,32 @@ public class LemmingStateMachine : MonoBehaviour
                 sprite.color = Color.blue;
 
                 break;
+
             case LemmingState.STOP:
                 sprite.color = Color.gray;
                 rb.velocity = new Vector2(0, 0);
+                gameObject.layer = LayerMask.NameToLayer("StoppedLemming");
+                rb.mass = 100;
                 break;
+
             case LemmingState.FALLING:
                 sprite.color = Color.red;
+                rb.velocity = new Vector2(0, rb.velocity.y);
                 break;
+
             case LemmingState.WALK_LEFT:
                 sprite.color = Color.cyan;
                 _walkingRight = false;
                 rb.velocity = new Vector2(0, 0);
-
-
                 break;
+
             case LemmingState.WALK_RIGHT:
                 sprite.color = Color.green;
                 _walkingRight = true;
                 rb.velocity = new Vector2(0, 0);
+                break;
 
+            case LemmingState.CLIMBING:
 
                 break;
             default:
@@ -85,24 +94,30 @@ public class LemmingStateMachine : MonoBehaviour
                     TransitionToState(LemmingState.FALLING);
                 }
                 break;
+
             case LemmingState.STOP:
                 break;
+
             case LemmingState.FALLING:
                 if (!_isFalling)
                 {
-                    RandomizeWalkDirection();  
+                    RandomizeWalkDirection();
                 }
                 break;
+
             case LemmingState.WALK_LEFT:
                 if (_isFalling) { TransitionToState(LemmingState.FALLING); }
+                if (_isStopped) { TransitionToState(LemmingState.STOP); }
                 Walking(_walkingRight);
-                
-
                 break;
+
             case LemmingState.WALK_RIGHT:
                 if (_isFalling) { TransitionToState(LemmingState.FALLING); }
+                if (_isStopped) { TransitionToState(LemmingState.STOP); }
                 Walking(_walkingRight);
-                
+                break;
+
+            case LemmingState.CLIMBING:
 
                 break;
             default:
@@ -111,6 +126,25 @@ public class LemmingStateMachine : MonoBehaviour
     }
     public void StateExit()
     {
+        switch (_currentState)
+        {
+            case LemmingState.IDLE:
+                break;
+            case LemmingState.STOP:
+                rb.mass = 1;
+                gameObject.layer = LayerMask.NameToLayer("Lemming");
+                break;
+            case LemmingState.FALLING:
+                break;
+            case LemmingState.WALK_LEFT:
+                break;
+            case LemmingState.WALK_RIGHT:
+                break;
+            case LemmingState.CLIMBING:
+                break;
+            default:
+                break;
+        }
 
     }
 
@@ -126,7 +160,7 @@ public class LemmingStateMachine : MonoBehaviour
         _isFalling = groundCheck == null;
     }
 
-    
+
     void Walking(bool walkingDirection)
     {
 
@@ -158,9 +192,12 @@ public class LemmingStateMachine : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if ((collision.collider.CompareTag("Lemming") && _currentState != LemmingState.STOP))
+        if ((_currentState == LemmingState.WALK_LEFT) || (_currentState == LemmingState.WALK_RIGHT))
         {
-            GoTheOppositeDirection();
+            if ((collision.collider.CompareTag("Lemming") && _currentState != LemmingState.STOP) || collision.collider.CompareTag("Wall"))
+            {
+                GoTheOppositeDirection();
+            }
         }
     }
 
@@ -179,6 +216,17 @@ public class LemmingStateMachine : MonoBehaviour
     private void OnDrawGizmos()
     {
         Gizmos.DrawWireCube(_groundSensor.position, _groundSensorSize);
+    }
+
+    void Climbing(bool walk)
+    {
+        Walking(walk);
+        rb.AddForce(speed * Time.deltaTime * Vector2.up);
+    }
+
+    public void Stop()
+    {
+        _isStopped = true;
     }
 }
 
